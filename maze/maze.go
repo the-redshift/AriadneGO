@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"math/rand"
 	"time"
+	"os"
+	"os/exec"
 	"ariadne/maze/cell"
 	"ariadne/maze/cell/direction"
 )
@@ -52,8 +54,8 @@ func New(height uint8, width uint8) (Maze, error) {
 }
 
 func (m *Maze) generate() {
-	// Randomize entrance/exit points
 	rand.Seed(time.Now().UnixNano())
+	// Randomize entrance/exit points
 	m.entrance = Point{0, uint8(rand.Intn(int(m.width)))}
 	m.exit = Point{uint8(m.height - 1), uint8(rand.Intn(int(m.width)))}
 
@@ -68,11 +70,54 @@ func (m *Maze) generate() {
 	m.cell_matrix[m.entrance.x][m.entrance.y].CarvePassage(direction.NORTH)
 	m.cell_matrix[m.exit.x][m.exit.y].CarvePassage(direction.SOUTH)
 
+	// Create random web of passages from starting point
+	m.createPassages(m.entrance)
+}
+
+func (m *Maze) createPassages(p Point) {
+	rand.Seed(time.Now().UnixNano())
+
+	directions := []direction.Direction{
+		direction.NORTH,
+		direction.EAST,
+		direction.WEST,
+		direction.SOUTH,
+	}
+	rand.Shuffle(len(directions), func(i, j int) { directions[i], directions[j] = directions[j], directions[i] })
+
+	for _, direction := range directions {
+		s_x, s_y := direction.ShiftCoordinates()
+		potential_x := int8(p.x) + s_x
+		potential_y := int8(p.y) + s_y
+
+		if potential_x < 0 || potential_x >= int8(m.width) {
+			continue
+		}
+		if potential_y < 0 || potential_y >= int8(m.height) {
+			continue
+		}
+
+		shiftedPoint := Point{uint8(potential_x), uint8(potential_y)}
+		if m.cell_matrix[shiftedPoint.x][shiftedPoint.y].Visited {
+			continue
+		}
+
+		m.cell_matrix[shiftedPoint.x][shiftedPoint.y].Visited = true
+		m.cell_matrix[p.x][p.y].CarvePassage(direction)
+		m.cell_matrix[shiftedPoint.x][shiftedPoint.y].CarvePassage(direction)
+
+		// Animate labirynth generation
+		m.Display()
+
+		// God I hope this recursion works
+		m.createPassages(shiftedPoint)
+		}
 }
 
 func (m Maze) Display() {
-	fmt.Println("[Entrance]", m.entrance)
-	fmt.Println("[Exit]", m.exit)
+	c := exec.Command("clear")
+	c.Stdout = os.Stdout
+	c.Run()
 
 	// Upper border, always solid
 	for i := uint8(0); i < m.width; i++ {
@@ -97,6 +142,9 @@ func (m Maze) Display() {
 	}
 
 	fmt.Println()
+
+	// Sleep to make animation smoother
+	time.Sleep(25 * time.Millisecond)
 }
 
 

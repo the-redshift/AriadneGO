@@ -2,11 +2,13 @@ package main
 
 import (
 	"ariadne/maze"
+	ariadne "ariadne/maze/ariadne"
 )
 
 func main() {
 	m, err := maze.New(25, 25)
 	if err == nil {
-		m.Display()
+		a := ariadne.New(m)
+		a.FindPath()
 	}
 }

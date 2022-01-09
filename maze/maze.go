@@ -9,43 +9,44 @@ import (
 	"os/exec"
 	"ariadne/maze/cell"
 	"ariadne/maze/cell/direction"
+	"github.com/fatih/color"
 )
 
 type Point struct {
-	x uint8
-	y uint8
+	X uint8
+	Y uint8
 }
 
 func (p Point) String() string {
-	return fmt.Sprintf("{x: %d, y: %d}", p.x, p.y)
+	return fmt.Sprintf("{x: %d, y: %d}", p.X, p.Y)
 }
 
 type Maze struct {
-	cell_matrix [][]cell.Cell
-	entrance Point
-	exit Point
-	height uint8
-	width uint8
+	Cell_matrix [][]cell.Cell
+	Entrance Point
+	Exit Point
+	Height uint8
+	Width uint8
 }
 
-func New(height uint8, width uint8) (Maze, error) {
-	const min_width_height uint8 = 3
+func New(Height uint8, Width uint8) (Maze, error) {
+	const min_Width_Height uint8 = 3
 	var m Maze
 
-	// Init maze's cell_matrix
-	if height < min_width_height || width < min_width_height {
-		var err_string = fmt.Sprintf("Minimum value for height and width is: %d", min_width_height)
+	// Init maze's Cell_matrix
+	if Height < min_Width_Height || Width < min_Width_Height {
+		var err_string = fmt.Sprintf("Minimum value for Height and Width is: %d", min_Width_Height)
 		return m, errors.New(err_string)
 	}
 
-	var cell_matrix = make([][]cell.Cell, height)
-	for i := range cell_matrix {
-		cell_matrix[i] = make([]cell.Cell, width)
+	var Cell_matrix = make([][]cell.Cell, Height)
+	for i := range Cell_matrix {
+		Cell_matrix[i] = make([]cell.Cell, Width)
 	}
 
-	m.cell_matrix = cell_matrix
-	m.width = width
-	m.height = height
+	m.Cell_matrix = Cell_matrix
+	m.Width = Width
+	m.Height = Height
 
 	// Generate actual values of the maze
 	m.generate()
@@ -55,23 +56,30 @@ func New(height uint8, width uint8) (Maze, error) {
 
 func (m *Maze) generate() {
 	rand.Seed(time.Now().UnixNano())
-	// Randomize entrance/exit points
-	m.entrance = Point{0, uint8(rand.Intn(int(m.width)))}
-	m.exit = Point{uint8(m.height - 1), uint8(rand.Intn(int(m.width)))}
+	// Randomize Entrance/Exit points
+	m.Entrance = Point{0, uint8(rand.Intn(int(m.Width)))}
+	m.Exit = Point{uint8(m.Height - 1), uint8(rand.Intn(int(m.Width)))}
 
 	// Fill out cell matrix with initial cells with complete borders
-	for i := range m.cell_matrix {
-		for j := range m.cell_matrix[i] {
-			m.cell_matrix[i][j] = cell.New()
+	for i := range m.Cell_matrix {
+		for j := range m.Cell_matrix[i] {
+			m.Cell_matrix[i][j] = cell.New()
 		}
 	}
 
-	// Removing appropriate walls from entrance/exit
-	m.cell_matrix[m.entrance.x][m.entrance.y].CarvePassage(direction.NORTH)
-	m.cell_matrix[m.exit.x][m.exit.y].CarvePassage(direction.SOUTH)
+	// Removing appropriate walls from Entrance/Exit
+	m.Cell_matrix[m.Entrance.X][m.Entrance.Y].CarvePassage(direction.NORTH)
+	m.Cell_matrix[m.Exit.X][m.Exit.Y].CarvePassage(direction.SOUTH)
 
 	// Create random web of passages from starting point
-	m.createPassages(m.entrance)
+	m.createPassages(m.Entrance)
+
+	// Reset 'Visited' values as Ariadne uses them to find path
+	for i := range m.Cell_matrix {
+		for j := range m.Cell_matrix[i] {
+			m.Cell_matrix[i][j].Visited = false
+		}
+	}
 }
 
 func (m *Maze) createPassages(p Point) {
@@ -87,41 +95,41 @@ func (m *Maze) createPassages(p Point) {
 
 	for _, direction := range directions {
 		s_x, s_y := direction.ShiftCoordinates()
-		potential_x := int8(p.x) + s_x
-		potential_y := int8(p.y) + s_y
+		potential_x := int8(p.X) + s_x
+		potential_y := int8(p.Y) + s_y
 
-		if potential_x < 0 || potential_x >= int8(m.width) {
+		if potential_x < 0 || potential_x >= int8(m.Width) {
 			continue
 		}
-		if potential_y < 0 || potential_y >= int8(m.height) {
+		if potential_y < 0 || potential_y >= int8(m.Height) {
 			continue
 		}
 
 		shiftedPoint := Point{uint8(potential_x), uint8(potential_y)}
-		if m.cell_matrix[shiftedPoint.x][shiftedPoint.y].Visited {
+		if m.Cell_matrix[shiftedPoint.X][shiftedPoint.Y].Visited {
 			continue
 		}
 
-		m.cell_matrix[shiftedPoint.x][shiftedPoint.y].Visited = true
-		m.cell_matrix[p.x][p.y].CarvePassage(direction)
-		m.cell_matrix[shiftedPoint.x][shiftedPoint.y].CarvePassage(direction)
+		m.Cell_matrix[shiftedPoint.X][shiftedPoint.Y].Visited = true
+		m.Cell_matrix[p.X][p.Y].CarvePassage(direction)
+		m.Cell_matrix[shiftedPoint.X][shiftedPoint.Y].CarvePassage(direction)
 
 		// Animate labirynth generation
-		m.Display()
+		// m.Display()
 
 		// God I hope this recursion works
 		m.createPassages(shiftedPoint)
 		}
 }
 
-func (m Maze) Display() {
+func (m Maze) Display(path []Point) {
 	c := exec.Command("clear")
 	c.Stdout = os.Stdout
 	c.Run()
 
 	// Upper border, always solid
-	for i := uint8(0); i < m.width; i++ {
-		if i == m.entrance.y {
+	for i := uint8(0); i < m.Width; i++ {
+		if i == m.Entrance.Y {
 			fmt.Printf("  ")
 		}	else {
 			fmt.Printf(" _")
@@ -129,13 +137,28 @@ func (m Maze) Display() {
 	}
 
 	// Then we display borders for each cell
-	for i := uint8(0); i < m.height; i++ {
+	for i := uint8(0); i < m.Height; i++ {
 		fmt.Println()
 
-		for j := uint8(0); j < m.width; j++ {
-			fmt.Printf("%s", m.cell_matrix[i][j])
+		for j := uint8(0); j < m.Width; j++ {
+			matched := false
+			for z := range path {
+				pathPoint := path[z]
+				if pathPoint.X == i && pathPoint.Y == j {
+					matched = true
+					break
+				}
+			}
 
-			if j == m.width - 1 {
+			if matched {
+				color.Set(color.BgRed)
+			} else {
+				color.Unset()
+			}
+
+			fmt.Printf("%s", m.Cell_matrix[i][j])
+
+			if j == m.Width - 1 {
 				fmt.Printf("|")
 			}
 		}

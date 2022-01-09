@@ -2,6 +2,7 @@ package cell
 
 import (
 	"fmt"
+	"errors"
 	"ariadne/maze/cell/direction"
 	"ariadne/maze/cell/border"
 )
@@ -32,6 +33,15 @@ func (c Cell) Display() {
 	for k, v := range c.borders {
 		fmt.Printf("[%s] %s\n", k, v)
 	}
+}
+
+func (c Cell) CarvePassage(d direction.Direction) error {
+	if _, exists := c.borders[d]; !exists {
+		return errors.New("Invalid direction. Accepted values: North, East, West, South.")
+	}
+
+	c.borders[d] = border.PASSAGE
+	return nil
 }
 
 

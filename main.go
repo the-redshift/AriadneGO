@@ -1,13 +1,12 @@
 package main
 
 import (
-	"ariadne/maze/cell"
-	"ariadne/maze/cell/direction"
+	"ariadne/maze"
 )
 
 func main() {
-	var c = cell.New()
-	c.Display()
-	c.CarvePassage(direction.WEST)
-	c.Display()
+	m, err := maze.New(25, 25)
+	if err == nil {
+		m.Display()
+	}
 }

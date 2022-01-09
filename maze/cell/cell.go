@@ -9,7 +9,7 @@ import (
 
 type Cell struct {
 	Visited bool
-	borders map[direction.Direction]border.Border
+	Borders map[direction.Direction]border.Border
 }
 
 func New() Cell {
@@ -22,7 +22,7 @@ func New() Cell {
 	}
 
 	c.Visited = false
-	c.borders = b
+	c.Borders = b
 
 	return c
 }
@@ -30,17 +30,35 @@ func New() Cell {
 func (c Cell) Display() {
 	fmt.Println("--- Cell Contents ---")
 	fmt.Println("[Visited]", c.Visited)
-	for k, v := range c.borders {
+	for k, v := range c.Borders {
 		fmt.Printf("[%s] %s\n", k, v)
 	}
 }
 
+func (c Cell) String() string {
+	var output = ""
+
+	if c.Borders[direction.WEST] == border.WALL {
+		output += "|"
+	} else {
+		output += " "
+	}
+
+	if c.Borders[direction.SOUTH] == border.WALL {
+		output += "_"
+	} else {
+		output += " "
+	}
+
+	return output
+}
+
 func (c Cell) CarvePassage(d direction.Direction) error {
-	if _, exists := c.borders[d]; !exists {
+	if _, exists := c.Borders[d]; !exists {
 		return errors.New("Invalid direction. Accepted values: North, East, West, South.")
 	}
 
-	c.borders[d] = border.PASSAGE
+	c.Borders[d] = border.PASSAGE
 	return nil
 }
 
